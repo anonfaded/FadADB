@@ -65,7 +65,12 @@ def ensure_wireless_connected(device_id):
     return None
 
 # Path for storing last known wireless IPs
-DATA_FILE = Path(__file__).parent / "fadadb_state.json"
+if getattr(sys, 'frozen', False):
+    # Running as a bundled exe
+    DATA_FILE = Path(sys.executable).parent / "fadadb_state.json"
+else:
+    # Running as script
+    DATA_FILE = Path(__file__).parent / "fadadb_state.json"
 
 def save_last_wireless_ips(ips):
     try:
@@ -329,9 +334,9 @@ class FadADBGUI(QMainWindow):
             with open(DATA_FILE, "r") as f:
                 data = json.load(f)
             pretty = json.dumps(data, indent=4)
-            self.log_action("[fadadb_state.json]\n" + pretty)
+            self.log_action(f"[fadadb_state.json] ({DATA_FILE})\n" + pretty)
         except Exception as e:
-            self.log_action(f"[!] Could not read state file: {e}")
+            self.log_action(f"[!] Could not read state file: {e}\nPath tried: {DATA_FILE}")
 
 # CLI Menu
 def main_menu():
