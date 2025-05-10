@@ -173,6 +173,14 @@ class FadADBGUI(QMainWindow):
         self.setStyleSheet("background-color: #121212; color: white;")
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
+        from PyQt6.QtGui import QIcon
+        # Set window icon
+        icon_path = str(Path(__file__).parent / 'assets' / 'img' / 'FadADB-ico.ico')
+        if getattr(sys, 'frozen', False):
+            # If running as exe, use exe dir
+            icon_path = str(Path(sys.executable).parent / 'assets' / 'img' / 'FadADB-ico.ico')
+        self.setWindowIcon(QIcon(icon_path))
+
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
