@@ -259,9 +259,10 @@ def main_menu():
         print(Fore.WHITE + f" {Fore.CYAN}2.{Fore.WHITE} Show connected devices")
         print(Fore.WHITE + f" {Fore.CYAN}3.{Fore.WHITE} Launch GUI")
         print(Fore.WHITE + f" {Fore.CYAN}4.{Fore.WHITE} Exit")
+        print(Fore.WHITE + f" {Fore.CYAN}5.{Fore.WHITE} Restart ADB Server")
         print(Style.DIM + "\nSelect a number to perform an action.")
 
-        choice = input(Fore.CYAN + "\n🔢 Select an option (1-4): ").strip()
+        choice = input(Fore.CYAN + "\n🔢 Select an option (1-5): ").strip()
 
         if choice == '1':
             connect_device()
@@ -272,9 +273,23 @@ def main_menu():
         elif choice == '4':
             print(Fore.YELLOW + "\n👋 Exiting FadADB. Goodbye!\n")
             break
+        elif choice == '5':
+            restart_adb_server_cli()
         else:
-            print(Fore.RED + "[!] Invalid option. Please select 1–4.")
+            print(Fore.RED + "[!] Invalid option. Please select 1–5.")
             time.sleep(1)
+
+def restart_adb_server_cli():
+    print(Fore.YELLOW + "\n[ADB] Killing server...")
+    stdout_kill, stderr_kill = run_command("adb kill-server")
+    if stdout_kill or stderr_kill:
+        print(Fore.WHITE + f"[ADB Kill-Server] {stdout_kill or stderr_kill}")
+    print(Fore.YELLOW + "[ADB] Starting server...")
+    stdout_start, stderr_start = run_command("adb start-server")
+    if stdout_start or stderr_start:
+        print(Fore.WHITE + f"[ADB Start-Server] {stdout_start or stderr_start}")
+    print(Fore.GREEN + "[ADB] Server restarted. Device list will be refreshed.")
+    input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
 
 def launch_gui():
     app = QApplication(sys.argv)
