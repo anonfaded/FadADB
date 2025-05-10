@@ -56,3 +56,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[Registry]
+; Add install dir to user PATH if not already present
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "PATH"; \
+    ValueData: "{olddata};{app}"; Flags: preservestringtype uninsdeletevalue
+

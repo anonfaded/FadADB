@@ -1,0 +1,20 @@
+#!/bin/bash
+# Add FadADB install directory to PATH for current user if not already present, then launch the app
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+if [[ ":$PATH:" != *":$SCRIPT_DIR:"* ]]; then
+    echo "export PATH=\"$PATH:$SCRIPT_DIR\"" >> "$HOME/.bashrc"
+    export PATH="$PATH:$SCRIPT_DIR"
+    echo "[FadADB] Added $SCRIPT_DIR to PATH. Restart your terminal to make it permanent."
+fi
+if [ -f "$SCRIPT_DIR/FadADB.exe" ]; then
+    # Try to launch with Wine if on Linux/WSL
+    if command -v wine >/dev/null 2>&1; then
+        wine "$SCRIPT_DIR/FadADB.exe" &
+    else
+        echo "FadADB.exe found, but Wine is not installed."
+        exit 1
+    fi
+else
+    # Fallback to Python script
+    python3 "$SCRIPT_DIR/FadADB.py" --gui
+fi

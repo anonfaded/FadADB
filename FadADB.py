@@ -176,8 +176,10 @@ class FadADBGUI(QMainWindow):
         from PyQt6.QtGui import QIcon
         # Set window icon
         if getattr(sys, 'frozen', False):
-            # If running as exe, use exe dir
-            icon_path = Path(sys.executable).parent / 'assets' / 'img' / 'FadADB-ico.ico'
+            # If running as exe, use PyInstaller's _MEIPASS if available
+            base_path = getattr(sys, '_MEIPASS', Path(sys.executable).parent)
+            icon_path = Path(base_path) / 'assets' / 'img' / 'FadADB-ico.ico'
+            # print(f"[DEBUG] Icon path resolved to: {icon_path}")  # Debug line commented out
         else:
             icon_path = Path(__file__).parent / 'assets' / 'img' / 'FadADB-ico.ico'
         self.setWindowIcon(QIcon(str(icon_path)))

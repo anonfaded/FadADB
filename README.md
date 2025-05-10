@@ -124,6 +124,24 @@ Or launch the `FadADB.exe` if using the packaged version.
 
 ---
 
+## Command Line Shortcut
+
+After installing or extracting FadADB, you can add it to your PATH for quick access:
+
+### Windows
+1. Add the FadADB folder to your PATH environment variable.
+2. Then you can run `fadadb` from any terminal to launch the GUI.
+
+### Linux
+1. Add the FadADB folder to your PATH, or copy the `fadadb` script to `/usr/local/bin`:
+   ```sh
+   sudo cp fadadb /usr/local/bin/
+   chmod +x /usr/local/bin/fadadb
+   ```
+2. Now you can run `fadadb` from any terminal to launch the GUI.
+
+---
+
 ## Requirements
 - Python 3.11+
 - PyQt6
