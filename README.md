@@ -13,7 +13,16 @@ FadADB is a modern, user-friendly tool for managing Android devices over ADB, su
 
 ## Screenshots
 
-(Add screenshots of the GUI and CLI here)
+**FadADB comes in both a modern GUI and a fast CLI version:**
+
+![FadADB GUI](assets/img/screenshots/gui.png)
+*FadADB GUI: Manage, connect, and test Android devices with a modern interface.*
+
+![FadADB GUI - More Features](assets/img/screenshots/gui2.png)
+*FadADB GUI: Additional features and device management tools.*
+
+![FadADB CLI](assets/img/screenshots/cli.png)
+*FadADB CLI: Fast, clear, and color-coded device management from the terminal.*
 
 ---
 
