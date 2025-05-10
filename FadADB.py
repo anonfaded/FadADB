@@ -5,7 +5,7 @@ import time
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
-    QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory
+    QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory, QTabWidget
 )
 from PyQt6.QtCore import Qt
 
@@ -38,8 +38,44 @@ def format_device_label(device_id):
     else:
         return f"🔌 USB: {device_id}"
 
-def connect_device():
+def get_device_ip(device_id):
+    # Try to get the device's IP address via adb shell
+    cmd = f"adb -s {device_id} shell ip -f inet addr show wlan0"
+    stdout, _ = run_command(cmd)
+    for line in stdout.splitlines():
+        line = line.strip()
+        if line.startswith("inet "):
+            ip = line.split()[1].split('/')[0]
+            if ip.startswith("192."):
+                return ip
+    return None
+
+def ensure_wireless_connected(device_id):
+    ip = get_device_ip(device_id)
+    if not ip:
+        return None  # No IP found, can't connect wirelessly
+    # Enable tcpip mode
+    run_command(f"adb -s {device_id} tcpip 5555")
+    # Try to connect
+    stdout, _ = run_command(f"adb connect {ip}:5555")
+    if "connected" in stdout or "already connected" in stdout:
+        return f"{ip}:5555"
+    return None
+
+def get_all_devices_with_wireless():
+    # Get all currently connected devices
     devices = get_connected_devices()
+    all_devices = set(devices)
+    # For each USB device, try to connect wirelessly
+    for dev in devices:
+        if not is_wireless(dev):
+            wireless_id = ensure_wireless_connected(dev)
+            if wireless_id:
+                all_devices.add(wireless_id)
+    return list(all_devices)
+
+def connect_device():
+    devices = get_all_devices_with_wireless()
     if not devices:
         print(Fore.RED + "\n[❌] No available devices to connect.")
         input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
@@ -99,66 +135,119 @@ class FadADBGUI(QMainWindow):
         self.setStyleSheet("background-color: #121212; color: white;")
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
-        widget = QWidget()
-        self.setCentralWidget(widget)
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
 
-        self.layout = QVBoxLayout()
+        # Device Tab
+        self.device_tab = QWidget()
+        self.device_layout = QVBoxLayout()
         self.label = QLabel("Available Devices:")
         self.combo = QComboBox()
-        self.refresh_button = QPushButton("Refresh")
+        self.refresh_button = QPushButton("Refresh Devices")
         self.connect_button = QPushButton("Connect")
+        self.test_button = QPushButton("Test Device")
         self.log = QTextEdit()
         self.log.setReadOnly(True)
 
         self.refresh_button.clicked.connect(self.load_devices)
         self.connect_button.clicked.connect(self.gui_connect_device)
+        self.test_button.clicked.connect(self.test_device)
 
-        self.combo.setStyleSheet("background-color: #1e1e1e; color: white;")
-        self.refresh_button.setStyleSheet("background-color: #333; color: white;")
-        self.connect_button.setStyleSheet("background-color: #008000; color: black;")
-
-        self.layout.addWidget(self.label)
-        self.layout.addWidget(self.combo)
-
+        self.device_layout.addWidget(self.label)
+        self.device_layout.addWidget(self.combo)
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.refresh_button)
         button_layout.addWidget(self.connect_button)
-        self.layout.addLayout(button_layout)
+        button_layout.addWidget(self.test_button)
+        self.device_layout.addLayout(button_layout)
+        self.device_layout.addWidget(QLabel("\nLogs:"))
+        self.device_layout.addWidget(self.log)
+        self.device_tab.setLayout(self.device_layout)
+        self.tabs.addTab(self.device_tab, "Devices")
 
-        self.layout.addWidget(QLabel("\nLogs:"))
-        self.layout.addWidget(self.log)
+        # ADB Tab
+        self.adb_tab = QWidget()
+        self.adb_layout = QVBoxLayout()
+        self.toggle_server_button = QPushButton("Restart ADB Server")
+        self.adb_log = QTextEdit()
+        self.adb_log.setReadOnly(True)
+        self.toggle_server_button.clicked.connect(self.toggle_adb_server)
+        adb_btn_layout = QHBoxLayout()
+        adb_btn_layout.addWidget(self.toggle_server_button)
+        self.adb_layout.addLayout(adb_btn_layout)
+        self.adb_layout.addWidget(QLabel("\nADB Logs:"))
+        self.adb_layout.addWidget(self.adb_log)
+        self.adb_tab.setLayout(self.adb_layout)
+        self.tabs.addTab(self.adb_tab, "ADB Tools")
 
-        widget.setLayout(self.layout)
         self.load_devices()
+
+    def log_action(self, message, adb=False):
+        if adb:
+            self.adb_log.append(message)
+        else:
+            self.log.append(message)
 
     def load_devices(self):
         self.combo.clear()
-        devices = get_connected_devices()
+        devices = get_all_devices_with_wireless()
         if devices:
             self.combo.addItems([format_device_label(d) for d in devices])
-            self.log.append("[+] Devices loaded.")
+            self.log_action("[+] Devices loaded.")
         else:
-            self.log.append("[!] No connected devices found.")
+            self.log_action("[!] No connected devices found.")
 
     def gui_connect_device(self):
         label = self.combo.currentText()
         if not label:
-            self.log.append("[!] No device selected.")
+            self.log_action("[!] No device selected.")
             return
-
-        device = label.split(" ", 1)[-1]  # Remove the (Label) prefix
-
+        device = label.split(" ", 1)[-1]
+        # Fix: Only use the actual device ID (strip label prefix)
+        if label.startswith("📡 Wireless:") or label.startswith("🔌 USB:"):
+            device = label.split(": ", 1)[-1]
         if is_wireless(device):
             stdout, stderr = run_command(f"adb connect {device}")
         else:
             stdout, stderr = "already connected", ""
-
         if "connected" in stdout:
-            self.log.append(f"[+] Connected to {device}.")
+            self.log_action(f"[+] Connected to {device}.")
         elif "already connected" in stdout:
-            self.log.append(f"[i] Already connected: {device}.")
+            self.log_action(f"[i] Already connected: {device}.")
         else:
-            self.log.append(f"[!] Connection failed: {stdout or stderr}")
+            self.log_action(f"[!] Connection failed: {stdout or stderr}")
+
+    def test_device(self):
+        label = self.combo.currentText()
+        if not label:
+            self.log_action("[!] No device selected.")
+            return
+        device = label.split(" ", 1)[-1]
+        # Fix: Only use the actual device ID (strip label prefix)
+        if label.startswith("📡 Wireless:") or label.startswith("🔌 USB:"):
+            device = label.split(": ", 1)[-1]
+        self.log_action(f"[Test] Running: adb -s {device} shell getprop ro.product.model")
+        stdout, stderr = run_command(f"adb -s {device} shell getprop ro.product.model")
+        if stdout:
+            self.log_action(f"[ADB STDOUT] {stdout}")
+        if stderr:
+            self.log_action(f"[ADB STDERR] {stderr}")
+        if not stdout and not stderr:
+            self.log_action("[!] No response from device.")
+
+    def toggle_adb_server(self):
+        self.toggle_server_button.setEnabled(False)
+        self.toggle_server_button.setText("Restarting...")
+        self.log_action("[ADB] Killing server...", adb=True)
+        stdout_kill, stderr_kill = run_command("adb kill-server")
+        self.log_action(f"[ADB Kill-Server] {stdout_kill or stderr_kill}", adb=True)
+        self.log_action("[ADB] Starting server...", adb=True)
+        stdout_start, stderr_start = run_command("adb start-server")
+        self.log_action(f"[ADB Start-Server] {stdout_start or stderr_start}", adb=True)
+        self.load_devices()
+        self.log_action("[ADB] Device list refreshed.", adb=True)
+        self.toggle_server_button.setText("Restart ADB Server")
+        self.toggle_server_button.setEnabled(True)
 
 # CLI Menu
 def main_menu():
