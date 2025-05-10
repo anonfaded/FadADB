@@ -164,7 +164,7 @@ def show_connected_devices():
 class FadADBGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FadADB - GUI")
+        self.setWindowTitle("FadADB - ADB manager for USB and wireless devices")
         self.setStyleSheet("background-color: #121212; color: white;")
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
@@ -176,9 +176,15 @@ class FadADBGUI(QMainWindow):
         self.device_layout = QVBoxLayout()
         self.label = QLabel("Available Devices:")
         self.combo = QComboBox()
+        self.combo.setPlaceholderText("Select a device from the list below...")
         self.refresh_button = QPushButton("Refresh Devices")
         self.connect_button = QPushButton("Connect")
         self.test_button = QPushButton("Test Device")
+        self.add_manual_button = QPushButton("Add Device by IP")
+        self.manual_ip_input = QComboBox()
+        self.manual_ip_input.setEditable(True)
+        self.manual_ip_input.setPlaceholderText("Enter device IP (e.g. 192.168.1.2:5555)")
+        self.add_manual_button.clicked.connect(self.add_manual_device)
         self.log = QTextEdit()
         self.log.setReadOnly(True)
 
@@ -188,6 +194,8 @@ class FadADBGUI(QMainWindow):
 
         self.device_layout.addWidget(self.label)
         self.device_layout.addWidget(self.combo)
+        self.device_layout.addWidget(self.manual_ip_input)
+        self.device_layout.addWidget(self.add_manual_button)
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.refresh_button)
         button_layout.addWidget(self.connect_button)
@@ -288,20 +296,43 @@ class FadADBGUI(QMainWindow):
         self.toggle_server_button.setText("Restart ADB Server")
         self.toggle_server_button.setEnabled(True)
 
+    def add_manual_device(self):
+        ip = self.manual_ip_input.currentText().strip()
+        if not ip:
+            self.log_action("[!] Please enter a device IP.")
+            return
+        if not (":" in ip and all(part.isdigit() for part in ip.split(":")[0].split("."))):
+            self.log_action("[!] Invalid IP format. Use e.g. 192.168.1.2:5555")
+            return
+        # Try to connect
+        self.log_action(f"[Manual Add] Connecting to {ip}...")
+        stdout, stderr = run_command(f"adb connect {ip}")
+        if "connected" in stdout or "already connected" in stdout:
+            # Add to state file
+            ips = load_last_wireless_ips()
+            if ip not in ips:
+                ips.append(ip)
+                save_last_wireless_ips(ips)
+            self.log_action(f"[+] Connected to {ip} and added to known devices.")
+            self.load_devices()
+        else:
+            self.log_action(f"[!] Connection failed: {stdout or stderr}")
+
 # CLI Menu
 def main_menu():
     while True:
         clear_terminal()
-        print(Fore.RED + Style.BRIGHT + "FadADB - Wireless ADB Connect Tool\n")
+        print(Fore.RED + Style.BRIGHT + "FadADB - ADB manager for USB and wireless devices\n")
         print(Fore.GREEN + "📋 Main Menu")
         print(Fore.WHITE + f" {Fore.CYAN}1.{Fore.WHITE} Connect device")
         print(Fore.WHITE + f" {Fore.CYAN}2.{Fore.WHITE} Show connected devices")
         print(Fore.WHITE + f" {Fore.CYAN}3.{Fore.WHITE} Launch GUI")
-        print(Fore.WHITE + f" {Fore.CYAN}4.{Fore.WHITE} Exit")
-        print(Fore.WHITE + f" {Fore.CYAN}5.{Fore.WHITE} Restart ADB Server")
+        print(Fore.WHITE + f" {Fore.CYAN}4.{Fore.WHITE} Restart ADB Server")
+        print(Fore.RED + f" {Fore.CYAN}5.{Fore.RED} Exit")
+        print(Fore.WHITE + f" {Fore.CYAN}6.{Fore.WHITE} Add device by IP (manual)")
         print(Style.DIM + "\nSelect a number to perform an action.")
 
-        choice = input(Fore.CYAN + "\n🔢 Select an option (1-5): ").strip()
+        choice = input(Fore.CYAN + "\n🔢 Select an option (1-6): ").strip()
 
         if choice == '1':
             connect_device()
@@ -310,12 +341,14 @@ def main_menu():
         elif choice == '3':
             launch_gui()
         elif choice == '4':
-            print(Fore.YELLOW + "\n👋 Exiting FadADB. Goodbye!\n")
-            break
-        elif choice == '5':
             restart_adb_server_cli()
+        elif choice == '5':
+            print(Fore.RED + Style.BRIGHT + "\n👋 Exiting FadADB. Goodbye!\n")
+            break
+        elif choice == '6':
+            add_manual_device_cli()
         else:
-            print(Fore.RED + "[!] Invalid option. Please select 1–5.")
+            print(Fore.RED + "[!] Invalid option. Please select 1–6.")
             time.sleep(1)
 
 def restart_adb_server_cli():
@@ -349,6 +382,27 @@ def launch_gui():
     # When GUI is closed, return control to CLI
     input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
 
+# Add CLI manual add feature
+def add_manual_device_cli():
+    print(Fore.GREEN + "\n[Manual Add] Enter the device IP (e.g. 192.168.1.2:5555):")
+    ip = input(Fore.CYAN + "IP: ").strip()
+    if not ip:
+        print(Fore.RED + "[!] No IP entered.")
+        return
+    if not (":" in ip and all(part.isdigit() for part in ip.split(":")[0].split("."))):
+        print(Fore.RED + "[!] Invalid IP format. Use e.g. 192.168.1.2:5555")
+        return
+    print(Fore.YELLOW + f"[Manual Add] Connecting to {ip}...")
+    stdout, stderr = run_command(f"adb connect {ip}")
+    if "connected" in stdout or "already connected" in stdout:
+        ips = load_last_wireless_ips()
+        if ip not in ips:
+            ips.append(ip)
+            save_last_wireless_ips(ips)
+        print(Fore.GREEN + f"[+] Connected to {ip} and added to known devices.")
+    else:
+        print(Fore.RED + f"[!] Connection failed: {stdout or stderr}")
+    input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
 
 # Entry Point
 if __name__ == '__main__':
