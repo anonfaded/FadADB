@@ -193,7 +193,13 @@ def launch_gui():
     window = FadADBGUI()
     window.resize(500, 400)
     window.show()
-    sys.exit(app.exec())
+
+    # Keep the CLI alive while GUI is open
+    app.exec()
+
+    # When GUI is closed, return control to CLI
+    input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
+
 
 # Entry Point
 if __name__ == '__main__':
