@@ -2,6 +2,8 @@ import subprocess
 import sys
 import os
 import time
+import json
+from pathlib import Path
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
@@ -62,17 +64,48 @@ def ensure_wireless_connected(device_id):
         return f"{ip}:5555"
     return None
 
+# Path for storing last known wireless IPs
+DATA_FILE = Path(__file__).parent / "fadadb_state.json"
+
+def save_last_wireless_ips(ips):
+    try:
+        with open(DATA_FILE, "w") as f:
+            json.dump({"wireless_ips": ips}, f)
+    except Exception as e:
+        pass  # Ignore errors
+
+def load_last_wireless_ips():
+    try:
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+            return data.get("wireless_ips", [])
+    except Exception:
+        return []
+
 def get_all_devices_with_wireless():
-    # Get all currently connected devices
     devices = get_connected_devices()
     all_devices = set(devices)
-    # For each USB device, try to connect wirelessly
+    wireless_ips = []
     for dev in devices:
         if not is_wireless(dev):
             wireless_id = ensure_wireless_connected(dev)
             if wireless_id:
                 all_devices.add(wireless_id)
+                wireless_ips.append(wireless_id)
+        elif is_wireless(dev):
+            wireless_ips.append(dev)
+    # Save all seen wireless IPs
+    save_last_wireless_ips(wireless_ips)
     return list(all_devices)
+
+def auto_reconnect_wireless():
+    ips = load_last_wireless_ips()
+    reconnected = []
+    for ip in ips:
+        stdout, stderr = run_command(f"adb connect {ip}")
+        if "connected" in stdout or "already connected" in stdout:
+            reconnected.append(ip)
+    return reconnected
 
 def connect_device():
     devices = get_all_devices_with_wireless()
@@ -244,6 +277,12 @@ class FadADBGUI(QMainWindow):
         self.log_action("[ADB] Starting server...", adb=True)
         stdout_start, stderr_start = run_command("adb start-server")
         self.log_action(f"[ADB Start-Server] {stdout_start or stderr_start}", adb=True)
+        self.log_action("[ADB] Attempting to auto-reconnect wireless devices...", adb=True)
+        reconnected = auto_reconnect_wireless()
+        if reconnected:
+            self.log_action(f"[ADB] Reconnected: {', '.join(reconnected)}", adb=True)
+        else:
+            self.log_action("[ADB] No wireless devices reconnected.", adb=True)
         self.load_devices()
         self.log_action("[ADB] Device list refreshed.", adb=True)
         self.toggle_server_button.setText("Restart ADB Server")
@@ -288,6 +327,12 @@ def restart_adb_server_cli():
     stdout_start, stderr_start = run_command("adb start-server")
     if stdout_start or stderr_start:
         print(Fore.WHITE + f"[ADB Start-Server] {stdout_start or stderr_start}")
+    print(Fore.YELLOW + "[ADB] Attempting to auto-reconnect wireless devices...")
+    reconnected = auto_reconnect_wireless()
+    if reconnected:
+        print(Fore.GREEN + f"[ADB] Reconnected: {', '.join(reconnected)}")
+    else:
+        print(Fore.RED + "[ADB] No wireless devices reconnected.")
     print(Fore.GREEN + "[ADB] Server restarted. Device list will be refreshed.")
     input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
 
