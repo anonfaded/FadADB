@@ -7,7 +7,7 @@ from pathlib import Path
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
-    QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory, QTabWidget
+    QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory, QTabWidget, QLineEdit
 )
 from PyQt6.QtCore import Qt
 
@@ -180,13 +180,19 @@ class FadADBGUI(QMainWindow):
         self.refresh_button = QPushButton("Refresh Devices")
         self.connect_button = QPushButton("Connect")
         self.test_button = QPushButton("Test Device")
+        # Manual add row
+        manual_row = QHBoxLayout()
+        self.manual_ip_input = QLineEdit()
+        self.manual_ip_input.setPlaceholderText("e.g. 192.168.1.2:5555")
         self.add_manual_button = QPushButton("Add Device by IP")
-        self.manual_ip_input = QComboBox()
-        self.manual_ip_input.setEditable(True)
-        self.manual_ip_input.setPlaceholderText("Enter device IP (e.g. 192.168.1.2:5555)")
+        self.add_manual_button.setToolTip("Add a device by IP:Port (e.g. 192.168.1.2:5555)")
         self.add_manual_button.clicked.connect(self.add_manual_device)
+        manual_row.addWidget(self.manual_ip_input)
+        manual_row.addWidget(self.add_manual_button)
         self.log = QTextEdit()
         self.log.setReadOnly(True)
+        self.view_state_button = QPushButton("View Saved Wireless Devices")
+        self.view_state_button.clicked.connect(self.show_state_file)
 
         self.refresh_button.clicked.connect(self.load_devices)
         self.connect_button.clicked.connect(self.gui_connect_device)
@@ -194,8 +200,8 @@ class FadADBGUI(QMainWindow):
 
         self.device_layout.addWidget(self.label)
         self.device_layout.addWidget(self.combo)
-        self.device_layout.addWidget(self.manual_ip_input)
-        self.device_layout.addWidget(self.add_manual_button)
+        self.device_layout.addLayout(manual_row)
+        self.device_layout.addWidget(self.view_state_button)
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.refresh_button)
         button_layout.addWidget(self.connect_button)
@@ -297,7 +303,7 @@ class FadADBGUI(QMainWindow):
         self.toggle_server_button.setEnabled(True)
 
     def add_manual_device(self):
-        ip = self.manual_ip_input.currentText().strip()
+        ip = self.manual_ip_input.text().strip()
         if not ip:
             self.log_action("[!] Please enter a device IP.")
             return
@@ -318,6 +324,15 @@ class FadADBGUI(QMainWindow):
         else:
             self.log_action(f"[!] Connection failed: {stdout or stderr}")
 
+    def show_state_file(self):
+        try:
+            with open(DATA_FILE, "r") as f:
+                data = json.load(f)
+            pretty = json.dumps(data, indent=4)
+            self.log_action("[fadadb_state.json]\n" + pretty)
+        except Exception as e:
+            self.log_action(f"[!] Could not read state file: {e}")
+
 # CLI Menu
 def main_menu():
     while True:
@@ -328,8 +343,8 @@ def main_menu():
         print(Fore.WHITE + f" {Fore.CYAN}2.{Fore.WHITE} Show connected devices")
         print(Fore.WHITE + f" {Fore.CYAN}3.{Fore.WHITE} Launch GUI")
         print(Fore.WHITE + f" {Fore.CYAN}4.{Fore.WHITE} Restart ADB Server")
-        print(Fore.RED + f" {Fore.CYAN}5.{Fore.RED} Exit")
-        print(Fore.WHITE + f" {Fore.CYAN}6.{Fore.WHITE} Add device by IP (manual)")
+        print(Fore.WHITE + f" {Fore.CYAN}5.{Fore.WHITE} Add device by IP (manual)")
+        print(Fore.RED + f" {Fore.CYAN}6.{Fore.RED} Exit")
         print(Style.DIM + "\nSelect a number to perform an action.")
 
         choice = input(Fore.CYAN + "\n🔢 Select an option (1-6): ").strip()
@@ -343,10 +358,10 @@ def main_menu():
         elif choice == '4':
             restart_adb_server_cli()
         elif choice == '5':
+            add_manual_device_cli()
+        elif choice == '6':
             print(Fore.RED + Style.BRIGHT + "\n👋 Exiting FadADB. Goodbye!\n")
             break
-        elif choice == '6':
-            add_manual_device_cli()
         else:
             print(Fore.RED + "[!] Invalid option. Please select 1–6.")
             time.sleep(1)
