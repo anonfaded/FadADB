@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 
 fadadb_state.json
+assets/innosetup/*
