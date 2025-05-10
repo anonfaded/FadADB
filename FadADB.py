@@ -2,14 +2,12 @@ import subprocess
 import sys
 import os
 import time
-import platform
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
     QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QWindow
 
 init(autoreset=True)
 
@@ -30,25 +28,29 @@ def get_connected_devices():
     return [line.split('\t')[0] for line in lines if '\tdevice' in line]
 
 def is_wireless(device_id):
-    return device_id.count('.') == 3 and ':' in device_id
+    # Checking if device_id starts with "192." indicating it's a wireless device
+    return device_id.startswith("192.")
 
 def format_device_label(device_id):
-    label = "(Wireless)" if is_wireless(device_id) else "(Physical)"
-    return f"{label} {device_id}"
+    # Check if device ID starts with "192." to indicate it's wireless
+    if device_id.startswith("192."):
+        return f"📡 Wireless: {device_id}"
+    else:
+        return f"🔌 USB: {device_id}"
 
 def connect_device():
     devices = get_connected_devices()
     if not devices:
-        print(Fore.RED + "\n[!] No available devices to connect.")
-        input(Fore.YELLOW + Style.DIM + "\nPress Enter to return to menu...")
+        print(Fore.RED + "\n[❌] No available devices to connect.")
+        input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
         return
 
     print(Fore.GREEN + "\n📱 Available Devices:")
     for idx, dev in enumerate(devices, 1):
         print(f" {idx}. {format_device_label(dev)}")
 
-    print(Style.DIM + "\nEnter the number of the device to connect or 'q' to return.")
-    selection = input(Fore.CYAN + "\nSelect device: ").strip()
+    print(Style.DIM + "\n✏️  Enter the number of the device to connect or 'q' to return.")
+    selection = input(Fore.CYAN + "\n🔢 Select device: ").strip()
 
     if selection.lower() == 'q':
         return
@@ -62,26 +64,32 @@ def connect_device():
     if is_wireless(selected_device):
         stdout, stderr = run_command(f"adb connect {selected_device}")
     else:
-        print(Fore.YELLOW + f"[i] Physical device detected, no connection needed: {selected_device}")
+        print(Fore.YELLOW + f"[ℹ️] Physical device detected, no connection needed: {selected_device}")
         stdout, stderr = "already connected", ""
 
     if "connected" in stdout:
-        print(Fore.GREEN + f"[+] Connected to {selected_device}.")
+        print(Fore.GREEN + f"[✅] Connected to {selected_device}.")
     elif "already connected" in stdout:
-        print(Fore.YELLOW + f"[i] Already connected: {selected_device}.")
+        print(Fore.YELLOW + f"[ℹ️] Already connected: {selected_device}.")
     else:
-        print(Fore.RED + f"[!] Connection failed: {stdout or stderr}")
-    input(Fore.YELLOW + Style.DIM + "\nPress Enter to return to menu...")
+        print(Fore.RED + f"[❌] Connection failed: {stdout or stderr}")
+    input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
 
 def show_connected_devices():
-    devices = get_connected_devices()
-    print("\n" + Fore.GREEN + "Connected Devices:")
-    if devices:
-        for idx, dev in enumerate(devices, 1):
-            print(f" {idx}. {format_device_label(dev)}")
+    clear_terminal()
+    print(Fore.GREEN + "\n🔌 Connected Devices:\n")
+
+    stdout, _ = run_command("adb devices")
+    lines = stdout.strip().split('\n')[1:]  # skip the header
+
+    if not lines or all("device" not in line for line in lines):
+        print(Fore.RED + "[❌] No connected devices found.")
     else:
-        print(Fore.RED + " No devices found.")
-    input(Fore.YELLOW + Style.DIM + "\nPress Enter to return to menu...")
+        for idx, line in enumerate(lines, 1):
+            device = line.strip().split()[0]
+            print(f" {Fore.CYAN}{idx}.{Fore.GREEN} {format_device_label(device)}")
+
+    input(Fore.WHITE + Style.DIM + "\n🔙 Press Enter to return to menu...")
 
 # GUI Class
 class FadADBGUI(QMainWindow):
@@ -153,34 +161,30 @@ class FadADBGUI(QMainWindow):
             self.log.append(f"[!] Connection failed: {stdout or stderr}")
 
 # CLI Menu
-
 def main_menu():
     while True:
         clear_terminal()
         print(Fore.RED + Style.BRIGHT + "FadADB - Wireless ADB Connect Tool\n")
-        print(Fore.GREEN + "1. Connect device")
-        print(Fore.GREEN + "2. Show connected devices")
-        print(Fore.GREEN + "3. Launch GUI")
-        print(Fore.GREEN + "4. Exit")
+        print(Fore.GREEN + "📋 Main Menu")
+        print(Fore.WHITE + f" {Fore.CYAN}1.{Fore.WHITE} Connect device")
+        print(Fore.WHITE + f" {Fore.CYAN}2.{Fore.WHITE} Show connected devices")
+        print(Fore.WHITE + f" {Fore.CYAN}3.{Fore.WHITE} Launch GUI")
+        print(Fore.WHITE + f" {Fore.CYAN}4.{Fore.WHITE} Exit")
         print(Style.DIM + "\nSelect a number to perform an action.")
 
-        try:
-            choice = input(Fore.CYAN + Style.BRIGHT + "\nSelect an option (1-4): ").strip()
-            if choice == '1':
-                connect_device()
-            elif choice == '2':
-                show_connected_devices()
-            elif choice == '3':
-                launch_gui()
-            elif choice == '4':
-                print(Fore.YELLOW + "Exiting...")
-                time.sleep(1)
-                break
-            else:
-                print(Fore.RED + "Invalid option. Please try again.")
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print(Fore.RED + "\n[!] Operation cancelled.")
+        choice = input(Fore.CYAN + "\n🔢 Select an option (1-4): ").strip()
+
+        if choice == '1':
+            connect_device()
+        elif choice == '2':
+            show_connected_devices()
+        elif choice == '3':
+            launch_gui()
+        elif choice == '4':
+            print(Fore.YELLOW + "\n👋 Exiting FadADB. Goodbye!\n")
+            break
+        else:
+            print(Fore.RED + "[!] Invalid option. Please select 1–4.")
             time.sleep(1)
 
 def launch_gui():
