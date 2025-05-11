@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/img/FadADB-png.png" alt="FadADB Icon" width="80" />
+  <img src="assets/img/FadADB-png.png" alt="FadADB Icon" width="220" />
 
 
 # **FadADB - ADB Manager for USB and Wireless Devices**
