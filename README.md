@@ -44,7 +44,7 @@ FadADB is a modern, user-friendly tool for managing Android devices over ADB, su
 
 ### Windows (Recommended)
 
-- Download the latest installer from the [Releases](#) page.
+- Download the latest installer from the [Releases](https://github.com/anonfaded/FadADB/releases/) page.
 - Run the installer and follow the prompts.
 - Launch FadADB from the Start Menu or Desktop shortcut.
 
