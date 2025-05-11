@@ -7,7 +7,28 @@
 
 <div align="center">
 FadADB is a modern, user-friendly tool for managing Android devices over ADB, supporting both USB and wireless connections. It features a CLI and a beautiful cross-platform GUI, making it easy to connect, manage, and troubleshoot your Android devices for development, debugging, and automation.
+
+<br>
+
+[![GitHub all releases](https://img.shields.io/github/downloads/anonfaded/FadADB/total?label=Downloads&logo=github)](https://github.com/anonfaded/FadADB/releases/)
+
+[![ko-fi badge](https://img.shields.io/badge/buy_me_a-coffee-red)](https://ko-fi.com/D1D510FNSV)
+[![Discord](https://img.shields.io/discord/1263384048194027520?label=Join%20Us%20on%20Discord&logo=discord)](https://discord.gg/kvAZvdkuuN )
+
+
+
+
+<br>
+
+| :exclamation: | This project is part of the [FadSec Lab suite](https://github.com/fadsec-lab). <br> Discover our focus on ad-free, privacy-first applications and stay updated on future releases!  |
+|---------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
 </div>
+
+<p align="center">
+        <img src="https://raw.githubusercontent.com/bornmay/bornmay/Update/svg/Bottom.svg" alt="Github Stats" />
+</p>
+
 
 ---
 
@@ -41,6 +62,8 @@ FadADB is a modern, user-friendly tool for managing Android devices over ADB, su
 ---
 
 ## Installation
+
+[<img src="https://raw.githubusercontent.com/vadret/android/master/assets/get-github.png" alt="Get it on GitHub" height="70">](https://github.com/anonfaded/FadADB/releases)
 
 ### Windows (Recommended)
 
@@ -126,19 +149,7 @@ Or launch the `FadADB.exe` if using the packaged version.
 
 ## Command Line Shortcut
 
-After installing or extracting FadADB, you can add it to your PATH for quick access:
-
-### Windows
-1. Add the FadADB folder to your PATH environment variable.
-2. Then you can run `fadadb` from any terminal to launch the GUI.
-
-### Linux
-1. Add the FadADB folder to your PATH, or copy the `fadadb` script to `/usr/local/bin`:
-   ```sh
-   sudo cp fadadb /usr/local/bin/
-   chmod +x /usr/local/bin/fadadb
-   ```
-2. Now you can run `fadadb` from any terminal to launch the GUI.
+- You can run `fadadb` command from any terminal to launch the GUI.
 
 ---
 
@@ -150,8 +161,15 @@ After installing or extracting FadADB, you can add it to your PATH for quick acc
 
 ---
 
-## License
-GPLv3
+## Join Community
+Join our [Discord server](https://discord.gg/kvAZvdkuuN) to share ideas, seek help, or connect with other users. Your feedback and contributions are welcome!
+
+[![Discord](https://img.shields.io/discord/1263384048194027520?label=Join%20Us%20on%20Discord&logo=discord)](https://discord.gg/kvAZvdkuuN )
+
+
+## Support
+
+<a href='https://ko-fi.com/D1D510FNSV' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
 ---
 
