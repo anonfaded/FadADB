@@ -5,6 +5,7 @@ import time
 import json
 import platform
 import shutil
+import logging
 from pathlib import Path
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
@@ -14,6 +15,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 init(autoreset=True)
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('FadADB')
 
 # Get base directory and determine path to bundled ADB
 if getattr(sys, 'frozen', False):
@@ -196,6 +201,92 @@ class FadADBGUI(QMainWindow):
         self.setWindowTitle("FadADB - ADB manager for USB and wireless devices")
         self.setStyleSheet("background-color: #121212; color: white;")
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+
+        # ----- Fix Start for dark title bar -----
+        # Use explicit print statements for debugging in addition to logger
+        print("Setting up dark title bar for FadADB...")
+        
+        system = platform.system().lower()
+        if system == "windows":
+            # For Windows, use a proven working method with multiple checks
+            print("Windows system detected, applying dark title bar...")
+            try:
+                # For Windows 10/11
+                import ctypes
+                
+                # Enable Dark Mode in the application process
+                try:
+                    # Try to force Windows app to use dark mode
+                    ctypes.windll.UxTheme.SetPreferredAppMode(2)  # 2 = Force Dark Mode
+                    print("Set preferred app mode to dark")
+                except Exception as e:
+                    print(f"UxTheme approach failed: {e}")
+                
+                # Get the app window handle and apply title bar color
+                try:
+                    hwnd = int(self.winId())
+                    print(f"Window handle: {hwnd}")
+                    
+                    # Try multiple known methods for dark title bar
+                    
+                    # Method 1: Windows 11 22H2+ (newer builds)
+                    try:
+                        # Prefer Win11 dark title bar color directly
+                        # DWMWA_CAPTION_COLOR = 35 (Windows 11 22H2)
+                        DWMWA_CAPTION_COLOR = 35
+                        # RGB for dark color (note: this is in BGR format - 0x00BBGGRR)
+                        dark_color = ctypes.c_int(0x00303030)  # Dark gray
+                        
+                        # Use explicit debug
+                        print(f"Trying caption color attribute {DWMWA_CAPTION_COLOR}")
+                        
+                        result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                            hwnd,
+                            DWMWA_CAPTION_COLOR, 
+                            ctypes.byref(dark_color),
+                            ctypes.sizeof(dark_color)
+                        )
+                        print(f"Caption color result: {result}")
+                        if result == 0:  # S_OK = 0
+                            print("Successfully applied dark title bar using caption color")
+                            logger.info("Dark caption color applied successfully")
+                    except Exception as e:
+                        print(f"Caption color method failed: {e}")
+                    
+                    # Method 2: Windows 10/11 dark mode attribute
+                    try:
+                        # DWMWA_USE_IMMERSIVE_DARK_MODE
+                        for attr_value in [20, 19]:  # Try both known values
+                            try:
+                                print(f"Trying dark mode attribute {attr_value}")
+                                dark_mode_enabled = ctypes.c_int(1)  # 1 = Enable dark mode
+                                result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                                    hwnd,
+                                    attr_value,  # Attribute ID
+                                    ctypes.byref(dark_mode_enabled),
+                                    ctypes.sizeof(dark_mode_enabled)
+                                )
+                                print(f"Dark mode attribute {attr_value} result: {result}")
+                                if result == 0:  # S_OK = 0
+                                    print(f"Successfully applied dark mode attribute {attr_value}")
+                                    logger.info(f"Dark title bar applied with attribute {attr_value}")
+                                    break  # Exit the loop if successful
+                            except Exception as e:
+                                print(f"Attribute {attr_value} failed: {e}")
+                    except Exception as e:
+                        print(f"Dark mode attribute methods failed: {e}")
+            
+                except Exception as e:
+                    print(f"Window handle operations failed: {e}")
+            
+            except Exception as e:
+                print(f"Windows dark title bar application failed: {e}")
+                logger.error(f"Failed to apply dark title bar: {e}")
+                
+        elif system == "linux":
+            print("Linux system detected - no title bar styling applied")
+            # No specific styling for Linux as it depends heavily on window manager
+        # ----- Fix Ended for dark title bar -----
 
         from PyQt6.QtGui import QIcon
         # Set window icon
