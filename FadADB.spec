@@ -3,11 +3,27 @@
 block_cipher = None
 
 import sys
+import os
 from pathlib import Path
 
 # Set the path to the state file to ensure it's in the same directory as the exe
 state_file = 'fadadb_state.json'
 icon_file = 'assets/img/FadADB-ico.ico'
+
+# Function to collect all files in a directory
+def collect_files_recursive(directory, dest_dir):
+    files_list = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            source_path = os.path.join(root, file)
+            rel_path = os.path.relpath(source_path, start=directory)
+            dest_path = os.path.join(dest_dir, rel_path)
+            dest_dir_name = os.path.dirname(dest_path)
+            files_list.append((source_path, dest_dir_name))
+    return files_list
+
+# Collect ADB binaries
+adb_data = collect_files_recursive('assets/adb', 'assets/adb')
 
 a = Analysis(
     ['FadADB.py'],
@@ -16,7 +32,7 @@ a = Analysis(
     datas=[
         ('assets/img/FadADB-ico.ico', 'assets/img'),
         ('assets/img/FadADB-png.png', 'assets/img'),
-    ],  # Bundle icon and screenshots
+    ] + adb_data,  # Bundle icon, screenshots, and ADB binaries
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

@@ -3,6 +3,8 @@ import sys
 import os
 import time
 import json
+import platform
+import shutil
 from pathlib import Path
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
@@ -13,12 +15,42 @@ from PyQt6.QtCore import Qt
 
 init(autoreset=True)
 
+# Get base directory and determine path to bundled ADB
+if getattr(sys, 'frozen', False):
+    # Running as a bundled exe
+    BASE_DIR = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent))
+    DATA_FILE = Path(sys.executable).parent / "fadadb_state.json"
+else:
+    # Running as script
+    BASE_DIR = Path(__file__).parent
+    DATA_FILE = Path(__file__).parent / "fadadb_state.json"
+
+def get_adb_path():
+    """Returns the path to the bundled ADB executable based on OS."""
+    system = platform.system().lower()
+    if system == 'windows':
+        adb_path = BASE_DIR / 'assets' / 'adb' / 'platform-tools-windows' / 'adb.exe'
+    elif system == 'linux':
+        adb_path = BASE_DIR / 'assets' / 'adb' / 'platform-tools-linux' / 'adb'
+    else:
+        raise EnvironmentError(f"Unsupported operating system: {system}")
+    
+    # Make sure ADB is executable on Linux
+    if system == 'linux' and adb_path.exists():
+        os.chmod(str(adb_path), 0o755)
+    
+    return str(adb_path)
+
 # Utility Functions
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def run_command(command):
     try:
+        # Replace direct "adb" calls with the full path to our bundled adb
+        adb_path = get_adb_path()
+        command = command.replace("adb ", f'"{adb_path}" ')
+        
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         return result.stdout.strip(), result.stderr.strip()
     except Exception as e:
@@ -63,14 +95,6 @@ def ensure_wireless_connected(device_id):
     if "connected" in stdout or "already connected" in stdout:
         return f"{ip}:5555"
     return None
-
-# Path for storing last known wireless IPs
-if getattr(sys, 'frozen', False):
-    # Running as a bundled exe
-    DATA_FILE = Path(sys.executable).parent / "fadadb_state.json"
-else:
-    # Running as script
-    DATA_FILE = Path(__file__).parent / "fadadb_state.json"
 
 def save_last_wireless_ips(ips):
     try:
@@ -242,6 +266,10 @@ class FadADBGUI(QMainWindow):
         self.adb_layout.addWidget(self.adb_log)
         self.adb_tab.setLayout(self.adb_layout)
         self.tabs.addTab(self.adb_tab, "ADB Tools")
+
+        # Show ADB path in logs on startup
+        adb_path = get_adb_path()
+        self.log_action(f"[INFO] Using bundled ADB: {adb_path}", adb=True)
 
         self.load_devices()
 
@@ -437,6 +465,18 @@ def add_manual_device_cli():
 
 # Entry Point
 if __name__ == '__main__':
+    # Verify the ADB binary exists
+    try:
+        adb_path = get_adb_path()
+        if not Path(adb_path).exists():
+            print(Fore.RED + f"[ERROR] Could not find ADB binary at: {adb_path}")
+            print(Fore.RED + "Please ensure the ADB binaries are properly installed in the assets/adb directory.")
+            sys.exit(1)
+        print(Fore.GREEN + f"[INFO] Using bundled ADB: {adb_path}")
+    except Exception as e:
+        print(Fore.RED + f"[ERROR] {str(e)}")
+        sys.exit(1)
+        
     if len(sys.argv) > 1 and sys.argv[1] == "--gui":
         launch_gui()
     else:
