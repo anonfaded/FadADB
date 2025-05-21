@@ -609,9 +609,9 @@ class FadADBGUI(QMainWindow):
         # Manual add row
         manual_row = QHBoxLayout()
         self.manual_ip_input = QLineEdit()
-        self.manual_ip_input.setPlaceholderText("e.g. 192.168.1.2:5555")
+        self.manual_ip_input.setPlaceholderText("e.g. 192.168.1.2 or 192.168.1.2:5555")
         self.add_manual_button = QPushButton("Add Device by IP")
-        self.add_manual_button.setToolTip("Add a device by IP:Port (e.g. 192.168.1.2:5555)")
+        self.add_manual_button.setToolTip("Add a device by IP (port 5555 will be added automatically if omitted)")
         self.add_manual_button.clicked.connect(self.add_manual_device)
         manual_row.addWidget(self.manual_ip_input)
         manual_row.addWidget(self.add_manual_button)
@@ -1064,13 +1064,24 @@ class FadADBGUI(QMainWindow):
 
     def add_manual_device(self):
         """Adds a device by IP asynchronously."""
-        ip = self.manual_ip_input.text().strip()
-        if not ip:
+        ip_input = self.manual_ip_input.text().strip()
+        if not ip_input:
             self.log_action("[!] Please enter a device IP.")
             return
             
-        if not (":" in ip and all(part.isdigit() for part in ip.split(":")[0].split("."))):
-            self.log_action("[!] Invalid IP format. Use e.g. 192.168.1.2:5555")
+        # Check if the input contains a port
+        if ":" not in ip_input:
+            # No port specified, so add the default ADB port 5555
+            ip = f"{ip_input}:5555"
+            self.log_action(f"[ℹ️] Adding default port 5555 to the IP address: {ip}")
+        else:
+            ip = ip_input
+            
+        # Validate the IP part
+        ip_part = ip.split(":")[0]
+        parts = ip_part.split(".")
+        if len(parts) != 4 or not all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+            self.log_action("[!] Invalid IP format. Use e.g. 192.168.1.2 or 192.168.1.2:5555")
             return
             
         # Try to connect
@@ -1203,14 +1214,27 @@ def launch_gui():
 
 # Add CLI manual add feature
 def add_manual_device_cli():
-    print(Fore.GREEN + "\n[Manual Add] Enter the device IP (e.g. 192.168.1.2:5555):")
-    ip = input(Fore.CYAN + "IP: ").strip()
-    if not ip:
+    print(Fore.GREEN + "\n[Manual Add] Enter the device IP (e.g. 192.168.1.2 or 192.168.1.2:5555):")
+    ip_input = input(Fore.CYAN + "IP: ").strip()
+    if not ip_input:
         print(Fore.RED + "[!] No IP entered.")
         return
-    if not (":" in ip and all(part.isdigit() for part in ip.split(":")[0].split("."))):
-        print(Fore.RED + "[!] Invalid IP format. Use e.g. 192.168.1.2:5555")
+        
+    # Check if the input contains a port
+    if ":" not in ip_input:
+        # No port specified, so add the default ADB port 5555
+        ip = f"{ip_input}:5555"
+        print(Fore.YELLOW + f"[ℹ️] Adding default port 5555 to the IP address: {ip}")
+    else:
+        ip = ip_input
+        
+    # Validate the IP part
+    ip_part = ip.split(":")[0]
+    parts = ip_part.split(".")
+    if len(parts) != 4 or not all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+        print(Fore.RED + "[!] Invalid IP format. Use e.g. 192.168.1.2 or 192.168.1.2:5555")
         return
+        
     print(Fore.YELLOW + f"[Manual Add] Connecting to {ip}...")
     stdout, stderr = run_command(f"adb connect {ip}")
     if "connected" in stdout or "already connected" in stdout:
