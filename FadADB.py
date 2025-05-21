@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QProgressDialog, QDialog, QStatusBar, QProgressBar, QScrollArea, QFrame
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject, QTimer, QPropertyAnimation, QEasingCurve, QPoint
+from PyQt6.QtGui import QIcon, QPixmap, QTextCursor
 from PyQt6.QtGui import QIcon, QPixmap
 
 # Application version
@@ -436,9 +437,6 @@ class FadADBGUI(QMainWindow):
                 self.animation.setEndValue(QPoint(95, 3))   # End position (right side with margin)
                 
                 # Use bounce easing curve for more natural bounce effect
-                self.animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
-                
-                # Connect to handle continuous bouncing
                 self.direction = 1  # 1 = right, -1 = left
                 self.animation.finished.connect(self.bounce)
             
@@ -618,6 +616,18 @@ class FadADBGUI(QMainWindow):
         
         self.log = QTextEdit()
         self.log.setReadOnly(True)
+        # Enhanced styling for the log with better contrast
+        self.log.setStyleSheet("""
+            QTextEdit {
+                background-color: #1A1A1A; 
+                color: #66A0FF;  /* Blue default color */
+                border: 1px solid #444;
+                border-radius: 6px;
+                padding: 5px;
+                font-family: "Consolas", "Monaco", monospace;
+                selection-background-color: #D53343;
+            }
+        """)
         
         # Make logs scrollable vertically only
         self.log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -654,6 +664,18 @@ class FadADBGUI(QMainWindow):
         self.toggle_server_button = QPushButton("Restart ADB Server")
         self.adb_log = QTextEdit()
         self.adb_log.setReadOnly(True)
+        # Enhanced styling for the ADB log with better contrast
+        self.adb_log.setStyleSheet("""
+            QTextEdit {
+                background-color: #1A1A1A; 
+                color: #66A0FF;  /* Blue default color */
+                border: 1px solid #444;
+                border-radius: 6px;
+                padding: 5px;
+                font-family: "Consolas", "Monaco", monospace;
+                selection-background-color: #D53343;
+            }
+        """)
         
         # Make ADB logs scrollable vertically only
         self.adb_log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -784,11 +806,53 @@ class FadADBGUI(QMainWindow):
         return scroll
 
     def log_action(self, message, adb=False):
+        """Logs a message with color syntax highlighting based on message content."""
+        # Define colors for different types of messages
+        color_success = "#4CAF50"  # Green
+        color_error = "#FF5252"    # Red
+        color_info = "#66A0FF"     # Blue (default)
+        color_warning = "#FFC107"  # Amber
+        color_command = "#BB86FC"  # Purple
+        color_response = "#03DAC6" # Teal
+        
+        # Determine the color based on message content
+        color = color_info  # Default blue
+        
+        # Apply color based on message content
+        if "[+]" in message or "Connected" in message or "[✅]" in message or "Success" in message:
+            color = color_success
+        elif "[!]" in message or "failed" in message or "Error" in message or "error" in message or "[❌]" in message:
+            color = color_error
+        elif "[ℹ️]" in message or "Info" in message:
+            color = color_info
+        elif "[ADB" in message:
+            color = color_command
+        elif "STDOUT" in message:
+            color = color_response
+        elif "STDERR" in message:
+            color = color_error
+        elif "Warning" in message or "warning" in message:
+            color = color_warning
+            
+        # Create HTML for the message
+        formatted_message = f'<span style="color: {color};">{message}</span>'
+        
+        # Append to the appropriate log - using append method to ensure logs go at the bottom
         if adb:
-            self.adb_log.append(message)
+            # Use append to add message at the end
+            self.adb_log.append(formatted_message)
+            # Auto-scroll to bottom
+            scrollbar = self.adb_log.verticalScrollBar()
+            if scrollbar:
+                scrollbar.setValue(scrollbar.maximum())
         else:
-            self.log.append(message)
-    
+            # Use append to add message at the end
+            self.log.append(formatted_message)
+            # Auto-scroll to bottom
+            scrollbar = self.log.verticalScrollBar()
+            if scrollbar:
+                scrollbar.setValue(scrollbar.maximum())
+            
     def show_loading_dialog(self, message="Processing..."):
         """Shows a non-blocking status indicator in the status bar."""
         # Update status message
