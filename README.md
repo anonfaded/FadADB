@@ -57,6 +57,7 @@ FadADB is a modern, user-friendly tool for managing Android devices over ADB, su
 - **Test device**: Instantly check if a device is reachable and responsive
 - **ADB server management**: Restart the ADB server from the GUI or CLI
 - **View and manage saved wireless devices**
+- **Update checker**: Automatically check for new versions with one click
 - **Cross-platform**: Works on Windows and Linux
 
 ---
@@ -144,6 +145,7 @@ Or launch the `FadADB.exe` if using the packaged version.
   pyinstaller FadADB.spec
   ```
 - The output will be in `dist/FadADB/`
+- The spec file includes all necessary dependencies for features like the update checker
 
 ---
 
