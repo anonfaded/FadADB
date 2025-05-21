@@ -18,6 +18,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject, QTimer, QPropertyAnimation, QEasingCurve, QPoint
 from PyQt6.QtGui import QIcon, QPixmap
 
+# Application version
+APP_VERSION = "2.0"
+
 init(autoreset=True)
 
 # Setup logging
@@ -387,7 +390,7 @@ def show_connected_devices():
 class FadADBGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FadADB - ADB manager for USB and wireless devices")
+        self.setWindowTitle(f"FadADB v{APP_VERSION} - ADB manager for USB and wireless devices")
         self.setStyleSheet("background-color: #121212; color: white;")
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         
@@ -702,6 +705,11 @@ class FadADBGUI(QMainWindow):
         logo_layout.addWidget(logo_label)
         logo_layout.addStretch()
         
+        # Version label
+        version_label = QLabel(f"Version {APP_VERSION}")
+        version_label.setStyleSheet("color: #D53343; font-size: 16px; font-weight: bold; margin-bottom: 15px;")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
         # App information section
         info_text = QLabel()
         info_text.setTextFormat(Qt.TextFormat.RichText)
@@ -735,6 +743,7 @@ class FadADBGUI(QMainWindow):
         
         # Add everything to the layout
         self.about_layout.addLayout(logo_layout)
+        self.about_layout.addWidget(version_label)
         self.about_layout.addWidget(info_text)
         self.about_layout.addStretch()  # Push everything to the top
         
