@@ -9,6 +9,7 @@ from pathlib import Path
 # Set the path to the state file to ensure it's in the same directory as the exe
 state_file = 'fadadb_state.json'
 icon_file = 'assets/img/FadADB-ico.ico'
+fadsec_logo = 'assets/img/fadsec-lab-logo.png'
 
 # Function to collect all files in a directory
 def collect_files_recursive(directory, dest_dir):
@@ -32,7 +33,8 @@ a = Analysis(
     datas=[
         ('assets/img/FadADB-ico.ico', 'assets/img'),
         ('assets/img/FadADB-png.png', 'assets/img'),
-    ] + adb_data,  # Bundle icon, screenshots, and ADB binaries
+        ('assets/img/fadsec-lab-logo.png', 'assets/img'),
+    ] + adb_data,  # Bundle icons, screenshots, logo, and ADB binaries
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

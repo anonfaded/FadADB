@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory, QTabWidget, QLineEdit
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QPixmap
 
 init(autoreset=True)
 
@@ -288,7 +289,6 @@ class FadADBGUI(QMainWindow):
             # No specific styling for Linux as it depends heavily on window manager
         # ----- Fix Ended for dark title bar -----
 
-        from PyQt6.QtGui import QIcon
         # Set window icon
         if getattr(sys, 'frozen', False):
             # If running as exe, use PyInstaller's _MEIPASS if available
@@ -357,6 +357,79 @@ class FadADBGUI(QMainWindow):
         self.adb_layout.addWidget(self.adb_log)
         self.adb_tab.setLayout(self.adb_layout)
         self.tabs.addTab(self.adb_tab, "ADB Tools")
+
+        # About Tab
+        self.about_tab = QWidget()
+        self.about_layout = QVBoxLayout()
+        
+        # Logo section
+        logo_layout = QHBoxLayout()
+        logo_label = QLabel()
+        
+        # Get path to logo based on whether running as exe or script
+        if getattr(sys, 'frozen', False):
+            logo_path = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent)) / 'assets' / 'img' / 'fadsec-lab-logo.png'
+        else:
+            logo_path = Path(__file__).parent / 'assets' / 'img' / 'fadsec-lab-logo.png'
+            
+        # Load and display the logo if it exists
+        if logo_path.exists():
+            try:
+                pixmap = QPixmap(str(logo_path))
+                logo_label.setPixmap(pixmap.scaledToWidth(200, Qt.TransformationMode.SmoothTransformation))
+                logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            except Exception as e:
+                print(f"Error loading logo: {e}")
+                logo_label.setText("FadSec Lab")
+                logo_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+                logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        else:
+            logo_label.setText("FadSec Lab")
+            logo_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+        logo_layout.addStretch()
+        logo_layout.addWidget(logo_label)
+        logo_layout.addStretch()
+        
+        # App information section
+        info_text = QLabel()
+        info_text.setTextFormat(Qt.TextFormat.RichText)
+        info_text.setOpenExternalLinks(True)
+        info_text.setWordWrap(True)
+        info_text.setText("""
+        <h2 style="text-align: center;">Project by FadSec Lab</h2>
+        <p style="text-align: center;">
+            <a href="https://github.com/fadsec-lab">Check out more apps by FadSec Lab</a>
+        </p>
+        
+        <h3 style="text-align: center;">About FadADB</h3>
+        <p>
+            FadADB is a management tool for ADB (Android Debug Bridge) that simplifies 
+            connecting to Android devices over both USB and wireless connections.
+        </p>
+        <p>
+            It is designed for app developers, testers, and power users who need to 
+            efficiently work with multiple Android devices, especially maintaining wireless 
+            debugging connections.
+        </p>
+        
+        <h3 style="text-align: center;">License Information</h3>
+        <p>
+            This application uses Qt 6 licensed under LGPL v3.0.
+            Users have the right to obtain the Qt source code and replace Qt libraries with modified versions. To
+            obtain the source code of Qt used in this application, please visit: 
+            <a href="https://download.qt.io/archive/qt/">https://download.qt.io/archive/qt/</a>
+        </p>
+        """)
+        
+        # Add everything to the layout
+        self.about_layout.addLayout(logo_layout)
+        self.about_layout.addWidget(info_text)
+        self.about_layout.addStretch()  # Push everything to the top
+        
+        self.about_tab.setLayout(self.about_layout)
+        self.tabs.addTab(self.about_tab, "About")
 
         # Show ADB path in logs on startup
         adb_path = get_adb_path()
