@@ -589,7 +589,7 @@ class FadADBGUI(QMainWindow):
         
         # Create tab widget
         self.tabs = QTabWidget()
-        self.tabs.setToolTip("Switch between managing devices, ADB tools, and app information")
+        
         self.central_layout.addWidget(self.tabs)
 
         # Device Tab - Make scrollable
@@ -624,7 +624,7 @@ class FadADBGUI(QMainWindow):
         
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        # Enhanced styling for the log with better contrast
+        # Enhanced styling for the log with better contrast and context menu styling
         self.log.setStyleSheet("""
             QTextEdit {
                 background-color: #1A1A1A; 
@@ -634,6 +634,15 @@ class FadADBGUI(QMainWindow):
                 padding: 5px;
                 font-family: "Consolas", "Monaco", monospace;
                 selection-background-color: #D53343;
+            }
+            QMenu {
+                background-color: #1A1A1A;
+                color: white;
+                border: 1px solid #444;
+            }
+            QMenu::item:selected {
+                background-color: #D53343;
+                color: white;
             }
         """)
         
@@ -674,7 +683,7 @@ class FadADBGUI(QMainWindow):
         self.toggle_server_button.setToolTip("Restart the ADB server and attempt to reconnect wireless devices")
         self.adb_log = QTextEdit()
         self.adb_log.setReadOnly(True)
-        # Enhanced styling for the ADB log with better contrast
+        # Enhanced styling for the ADB log with better contrast and context menu styling
         self.adb_log.setStyleSheet("""
             QTextEdit {
                 background-color: #1A1A1A; 
@@ -684,6 +693,15 @@ class FadADBGUI(QMainWindow):
                 padding: 5px;
                 font-family: "Consolas", "Monaco", monospace;
                 selection-background-color: #D53343;
+            }
+            QMenu {
+                background-color: #1A1A1A;
+                color: white;
+                border: 1px solid #444;
+            }
+            QMenu::item:selected {
+                background-color: #D53343;
+                color: white;
             }
         """)
         
