@@ -8,16 +8,16 @@ import shutil
 import logging
 import tempfile
 import threading
+import importlib.util
 from pathlib import Path
 from colorama import init, Fore, Style
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
     QComboBox, QTextEdit, QHBoxLayout, QMainWindow, QStyleFactory, QTabWidget, QLineEdit,
-    QProgressDialog, QDialog, QStatusBar, QProgressBar, QScrollArea, QFrame
+    QProgressDialog, QDialog, QStatusBar, QProgressBar, QScrollArea, QFrame, QMessageBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject, QTimer, QPropertyAnimation, QEasingCurve, QPoint
-from PyQt6.QtGui import QIcon, QPixmap, QTextCursor
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QObject, QTimer, QPropertyAnimation, QEasingCurve, QPoint, QUrl
+from PyQt6.QtGui import QIcon, QPixmap, QTextCursor, QDesktopServices
 
 # Application version
 APP_VERSION = "2.0"
@@ -697,7 +697,7 @@ class FadADBGUI(QMainWindow):
         self.about_scroll.setWidget(self.about_tab_widget)
         self.about_layout = QVBoxLayout(self.about_tab_widget)
         
-        # Logo section
+        # Logo section directly in the main layout
         logo_layout = QHBoxLayout()
         logo_label = QLabel()
         
@@ -732,18 +732,32 @@ class FadADBGUI(QMainWindow):
         version_label.setStyleSheet("color: #D53343; font-size: 16px; font-weight: bold; margin-bottom: 15px;")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # App information section
+        # Information section box (containing project info and about info)
+        info_frame = QFrame()
+        info_frame.setStyleSheet("""
+            QFrame {
+                background-color: #212121;
+                border-radius: 10px;
+                border: 1px solid #444;
+                margin: 10px;
+                padding: 15px;
+            }
+        """)
+        info_frame_layout = QVBoxLayout(info_frame)
+        
+        # Project information
         info_text = QLabel()
         info_text.setTextFormat(Qt.TextFormat.RichText)
         info_text.setOpenExternalLinks(True)
         info_text.setWordWrap(True)
+        info_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info_text.setText("""
-        <h2 style="text-align: center;">Project by FadSec Lab</h2>
-        <p style="text-align: center;">
+        <h2 style="color: #D53343;">Project by FadSec Lab</h2>
+        <p>
             <a href="https://github.com/fadsec-lab">Check out more apps by FadSec Lab</a>
         </p>
         
-        <h3 style="text-align: center;">About FadADB</h3>
+        <h3 style="color: #D53343;">About FadADB</h3>
         <p>
             FadADB is a management tool for ADB (Android Debug Bridge) that simplifies 
             connecting to Android devices over both USB and wireless connections.
@@ -753,20 +767,109 @@ class FadADBGUI(QMainWindow):
             efficiently work with multiple Android devices, especially maintaining wireless 
             debugging connections.
         </p>
+        """)
         
-        <h3 style="text-align: center;">License Information</h3>
+        # Add to layout
+        info_frame_layout.addWidget(info_text)
+        
+        # Links section in a styled box
+        links_frame = QFrame()
+        links_frame.setStyleSheet("""
+            QFrame {
+                background-color: #212121;
+                border-radius: 10px;
+                border: 1px solid #444;
+                margin: 10px;
+                padding: 15px;
+            }
+        """)
+        links_layout = QVBoxLayout(links_frame)
+        
+        # HTML title and description
+        links_title = QLabel()
+        links_title.setTextFormat(Qt.TextFormat.RichText)
+        links_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        links_title.setText("<h3 style='color: #D53343;'>Links & Resources</h3>")
+        
+        # Button for source code link
+        source_code_btn = QPushButton("🔍 View Source Code on GitHub")
+        source_code_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2A2A2A;
+                color: white;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #3A3A3A;
+            }
+        """)
+        source_code_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/anonfaded/FadADB")))
+        
+        # Button for checking updates
+        check_updates_btn = QPushButton("🚀 Check for Updates")
+        check_updates_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2A2A2A;
+                color: white;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #3A3A3A;
+            }
+        """)
+        check_updates_btn.clicked.connect(lambda: self.check_for_updates())
+        
+        # Add buttons to links layout
+        links_layout.addWidget(links_title)
+        links_layout.addWidget(source_code_btn)
+        links_layout.addWidget(check_updates_btn)
+        
+        # License information in a styled box
+        license_frame = QFrame()
+        license_frame.setStyleSheet("""
+            QFrame {
+                background-color: #212121;
+                border-radius: 10px;
+                border: 1px solid #444;
+                margin: 10px;
+                padding: 15px;
+            }
+        """)
+        license_layout = QVBoxLayout(license_frame)
+        
+        # License text
+        license_text = QLabel()
+        license_text.setTextFormat(Qt.TextFormat.RichText)
+        license_text.setOpenExternalLinks(True)
+        license_text.setWordWrap(True)
+        license_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        license_text.setText("""
+        <h3 style="color: #D53343;">License Information</h3>
         <p>
             This application uses Qt 6 licensed under LGPL v3.0.
-            Users have the right to obtain the Qt source code and replace Qt libraries with modified versions. To
-            obtain the source code of Qt used in this application, please visit: 
-            <a href="https://download.qt.io/archive/qt/">https://download.qt.io/archive/qt/</a>
+            Users have the right to obtain the Qt source code and replace Qt libraries with modified versions.
+        </p>
+        <p>
+            <a href="https://download.qt.io/archive/qt/">Get Qt Source Code</a>
         </p>
         """)
         
-        # Add everything to the layout
+        # Add widgets to layout
+        license_layout.addWidget(license_text)
+        
+        # Add everything to the main layout with spacing for better appearance
         self.about_layout.addLayout(logo_layout)
         self.about_layout.addWidget(version_label)
-        self.about_layout.addWidget(info_text)
+        self.about_layout.addSpacing(10)  # Add a small space between logo and info
+        self.about_layout.addWidget(info_frame)
+        self.about_layout.addWidget(links_frame)
+        self.about_layout.addWidget(license_frame)
         self.about_layout.addStretch()  # Push everything to the top
         
         self.tabs.addTab(self.about_scroll, "About")
@@ -776,6 +879,135 @@ class FadADBGUI(QMainWindow):
         self.log_action(f"[INFO] Using bundled ADB: {adb_path}", adb=True)
 
         self.load_devices()
+        
+    def check_for_updates(self):
+        """Check for updates using the updater module"""
+        try:
+            # Try to import the updater module
+            updater_path = Path(__file__).parent / "updater.py"
+            if updater_path.exists():
+                # Dynamic import to avoid dependency issues
+                spec = importlib.util.spec_from_file_location("updater", updater_path)
+                updater = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(updater)
+                
+                # Set status
+                self.show_loading_dialog("Checking for updates...")
+                
+                # Run the updater in a separate thread
+                class UpdateCheckerWorker(QObject):
+                    finished = pyqtSignal()
+                    update_available = pyqtSignal(bool, str, str)
+                    update_error = pyqtSignal(str)
+                    
+                    def run(self):
+                        try:
+                            is_available, latest_version, release_url = updater.is_update_available(APP_VERSION)
+                            self.update_available.emit(is_available, latest_version, release_url)
+                        except Exception as e:
+                            logger.error(f"Error checking for updates: {e}")
+                            self.update_error.emit(str(e))
+                        finally:
+                            self.finished.emit()
+                
+                # Set up worker thread
+                self.update_worker = UpdateCheckerWorker()
+                self.update_thread = QThread()
+                self.update_worker.moveToThread(self.update_thread)
+                
+                # Connect signals
+                self.update_thread.started.connect(self.update_worker.run)
+                self.update_worker.finished.connect(self.update_thread.quit)
+                self.update_worker.finished.connect(self.update_worker.deleteLater)
+                self.update_thread.finished.connect(self.update_thread.deleteLater)
+                self.update_thread.finished.connect(self.hide_loading_dialog)
+                
+                # Connect result handling signals - these will be called in the main thread
+                self.update_worker.update_available.connect(self._handle_update_check_result)
+                self.update_worker.update_error.connect(self._handle_update_check_error)
+                
+                # Start thread
+                self.update_thread.start()
+            else:
+                self.log_action("[!] Update checker module not found. Please reinstall the application.", adb=True)
+                self.hide_loading_dialog()
+        except Exception as e:
+            logger.error(f"Error in update process: {e}")
+            self.log_action(f"[!] Update check failed: {str(e)}", adb=True)
+            self.hide_loading_dialog()
+            
+    def _handle_update_check_result(self, is_available, latest_version, release_url):
+        """Handle the update check result in the main thread"""
+        try:
+            # Import the updater module (should be safe since this is called after checking)
+            spec = importlib.util.spec_from_file_location("updater", Path(__file__).parent / "updater.py")
+            updater = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(updater)
+            
+            if is_available:
+                # Show update dialog from our thread
+                dialog = updater.UpdateDialog(APP_VERSION, latest_version, release_url, self)
+                dialog.exec()
+            else:
+                # Show "no updates" message from our thread
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("No Updates Available")
+                msg.setText(f"You are running the latest version ({APP_VERSION}).")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.setStyleSheet("""
+                    QMessageBox {
+                        background-color: #1A1A1A;
+                        color: white;
+                    }
+                    QLabel {
+                        color: white;
+                    }
+                    QPushButton {
+                        background-color: #2A2A2A;
+                        color: white;
+                        border: 1px solid #444;
+                        border-radius: 4px;
+                        padding: 6px 12px;
+                    }
+                    QPushButton:hover {
+                        background-color: #3A3A3A;
+                    }
+                """)
+                msg.show()
+        except Exception as e:
+            logger.error(f"Error handling update result: {e}")
+            self.log_action(f"[!] Update check result handling failed: {str(e)}", adb=True)
+    
+    def _handle_update_check_error(self, error_msg):
+        """Handle update check errors in the main thread"""
+        # Show error message from our thread
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("Update Check Failed")
+        msg.setText(f"Could not check for updates:\n{error_msg}")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.setStyleSheet("""
+            QMessageBox {
+                background-color: #1A1A1A;
+                color: white;
+            }
+            QLabel {
+                color: white;
+            }
+            QPushButton {
+                background-color: #2A2A2A;
+                color: white;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background-color: #3A3A3A;
+            }
+        """)
+        msg.show()
+        self.log_action(f"[!] Update check failed: {error_msg}", adb=True)
 
     def _create_scroll_area(self):
         """Creates a scroll area with proper styling and settings for tab content"""

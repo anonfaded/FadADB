@@ -34,8 +34,9 @@ a = Analysis(
         ('assets/img/FadADB-ico.ico', 'assets/img'),
         ('assets/img/FadADB-png.png', 'assets/img'),
         ('assets/img/fadsec-lab-logo.png', 'assets/img'),
+        ('updater.py', '.'),  # Include the updater module
     ] + adb_data,  # Bundle icons, screenshots, logo, and ADB binaries
-    hiddenimports=[],
+    hiddenimports=['certifi', 'ssl'],  # Required for secure connections
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
