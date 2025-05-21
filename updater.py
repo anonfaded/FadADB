@@ -1,8 +1,5 @@
 import re
-import ssl
-import certifi
 import logging
-import urllib.request
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QMessageBox
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtCore import Qt, QUrl
@@ -10,11 +7,25 @@ from PyQt6.QtCore import Qt, QUrl
 # Configure logging
 logger = logging.getLogger('FadADBUpdater')
 
+# Check if required modules are available for update checking
+UPDATE_AVAILABLE = True
+try:
+    import ssl
+    import certifi
+    import urllib.request
+except ImportError as e:
+    logger.error(f"Update functionality unavailable: {e}")
+    UPDATE_AVAILABLE = False
+
 def get_latest_version():
     """
     Fetch the latest version from GitHub releases page headers.
     Returns tuple (version_string, release_url)
     """
+    if not UPDATE_AVAILABLE:
+        logger.error("Update functionality unavailable: required modules missing")
+        return None, "https://github.com/anonfaded/FadADB/releases/latest"
+        
     repo_url = "https://github.com/anonfaded/FadADB"
     releases_url = f"{repo_url}/releases/latest"
     
@@ -60,6 +71,9 @@ def is_update_available(current_version):
     Check if an update is available
     Returns tuple (is_available, latest_version, release_url)
     """
+    if not UPDATE_AVAILABLE:
+        return False, None, "https://github.com/anonfaded/FadADB/releases/latest"
+        
     latest_version, release_url = get_latest_version()
     
     if not latest_version:

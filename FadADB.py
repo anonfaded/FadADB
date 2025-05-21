@@ -916,48 +916,69 @@ class FadADBGUI(QMainWindow):
             # Try to import the updater module
             updater_path = Path(__file__).parent / "updater.py"
             if updater_path.exists():
-                # Dynamic import to avoid dependency issues
-                spec = importlib.util.spec_from_file_location("updater", updater_path)
-                updater = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(updater)
-                
                 # Set status
                 self.show_loading_dialog("Checking for updates...")
                 
-                # Run the updater in a separate thread
-                class UpdateCheckerWorker(QObject):
-                    finished = pyqtSignal()
-                    update_available = pyqtSignal(bool, str, str)
-                    update_error = pyqtSignal(str)
+                try:
+                    # Dynamic import with error handling
+                    spec = importlib.util.spec_from_file_location("updater", updater_path)
+                    if spec is None:
+                        raise ImportError(f"Could not load spec for updater module from {updater_path}")
                     
-                    def run(self):
-                        try:
-                            is_available, latest_version, release_url = updater.is_update_available(APP_VERSION)
-                            self.update_available.emit(is_available, latest_version, release_url)
-                        except Exception as e:
-                            logger.error(f"Error checking for updates: {e}")
-                            self.update_error.emit(str(e))
-                        finally:
-                            self.finished.emit()
-                
-                # Set up worker thread
-                self.update_worker = UpdateCheckerWorker()
-                self.update_thread = QThread()
-                self.update_worker.moveToThread(self.update_thread)
-                
-                # Connect signals
-                self.update_thread.started.connect(self.update_worker.run)
-                self.update_worker.finished.connect(self.update_thread.quit)
-                self.update_worker.finished.connect(self.update_worker.deleteLater)
-                self.update_thread.finished.connect(self.update_thread.deleteLater)
-                self.update_thread.finished.connect(self.hide_loading_dialog)
-                
-                # Connect result handling signals - these will be called in the main thread
-                self.update_worker.update_available.connect(self._handle_update_check_result)
-                self.update_worker.update_error.connect(self._handle_update_check_error)
-                
-                # Start thread
-                self.update_thread.start()
+                    updater = importlib.util.module_from_spec(spec)
+                    if spec.loader is None:
+                        raise ImportError("Updater module loader is None")
+                    
+                    spec.loader.exec_module(updater)
+                    
+                    # Check if the updater has the required functionality
+                    if not hasattr(updater, "is_update_available"):
+                        self.log_action("[!] Updater module doesn't have required functions. Please reinstall.", adb=True)
+                        self.hide_loading_dialog()
+                        return
+                        
+                    # Run the updater in a separate thread
+                    class UpdateCheckerWorker(QObject):
+                        finished = pyqtSignal()
+                        update_available = pyqtSignal(bool, str, str)
+                        update_error = pyqtSignal(str)
+                        
+                        def run(self):
+                            try:
+                                is_available, latest_version, release_url = updater.is_update_available(APP_VERSION)
+                                self.update_available.emit(is_available, latest_version, release_url)
+                            except Exception as e:
+                                logger.error(f"Error checking for updates: {e}")
+                                self.update_error.emit(str(e))
+                            finally:
+                                self.finished.emit()
+                    
+                    # Set up worker thread
+                    self.update_worker = UpdateCheckerWorker()
+                    self.update_thread = QThread()
+                    self.update_worker.moveToThread(self.update_thread)
+                    
+                    # Connect signals
+                    self.update_thread.started.connect(self.update_worker.run)
+                    self.update_worker.finished.connect(self.update_thread.quit)
+                    self.update_worker.finished.connect(self.update_worker.deleteLater)
+                    self.update_thread.finished.connect(self.update_thread.deleteLater)
+                    self.update_thread.finished.connect(self.hide_loading_dialog)
+                    
+                    # Connect result handling signals - these will be called in the main thread
+                    self.update_worker.update_available.connect(self._handle_update_check_result)
+                    self.update_worker.update_error.connect(self._handle_update_check_error)
+                    
+                    # Start thread
+                    self.update_thread.start()
+                except ImportError as e:
+                    logger.error(f"Error importing updater module: {e}")
+                    self.log_action(f"[!] Update check failed: Missing required modules. {str(e)}", adb=True)
+                    self.hide_loading_dialog()
+                except Exception as e:
+                    logger.error(f"Error in updater initialization: {e}")
+                    self.log_action(f"[!] Update check failed: {str(e)}", adb=True)
+                    self.hide_loading_dialog()
             else:
                 self.log_action("[!] Update checker module not found. Please reinstall the application.", adb=True)
                 self.hide_loading_dialog()
@@ -969,42 +990,60 @@ class FadADBGUI(QMainWindow):
     def _handle_update_check_result(self, is_available, latest_version, release_url):
         """Handle the update check result in the main thread"""
         try:
-            # Import the updater module (should be safe since this is called after checking)
-            spec = importlib.util.spec_from_file_location("updater", Path(__file__).parent / "updater.py")
-            updater = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(updater)
-            
-            if is_available:
-                # Show update dialog from our thread
-                dialog = updater.UpdateDialog(APP_VERSION, latest_version, release_url, self)
-                dialog.exec()
-            else:
-                # Show "no updates" message from our thread
-                msg = QMessageBox(self)
-                msg.setIcon(QMessageBox.Icon.Information)
-                msg.setWindowTitle("No Updates Available")
-                msg.setText(f"You are running the latest version ({APP_VERSION}).")
-                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-                msg.setStyleSheet("""
-                    QMessageBox {
-                        background-color: #1A1A1A;
-                        color: white;
-                    }
-                    QLabel {
-                        color: white;
-                    }
-                    QPushButton {
-                        background-color: #2A2A2A;
-                        color: white;
-                        border: 1px solid #444;
-                        border-radius: 4px;
-                        padding: 6px 12px;
-                    }
-                    QPushButton:hover {
-                        background-color: #3A3A3A;
-                    }
-                """)
-                msg.show()
+            # Check if we have a valid result
+            if latest_version is None and not is_available:
+                self.log_action("[!] Update check completed, but couldn't determine version.", adb=True)
+                return
+                
+            # Try to import the updater module (should be safe since this is called after checking)
+            try:
+                spec = importlib.util.spec_from_file_location("updater", Path(__file__).parent / "updater.py")
+                if spec is None:
+                    raise ImportError("Could not load spec for updater module")
+                    
+                updater = importlib.util.module_from_spec(spec)
+                if spec.loader is None:
+                    raise ImportError("Updater module loader is None")
+                    
+                spec.loader.exec_module(updater)
+                
+                if is_available:
+                    # Show update dialog from our thread
+                    dialog = updater.UpdateDialog(APP_VERSION, latest_version, release_url, self)
+                    dialog.exec()
+                else:
+                    # Show "no updates" message from our thread
+                    msg = QMessageBox(self)
+                    msg.setIcon(QMessageBox.Icon.Information)
+                    msg.setWindowTitle("No Updates Available")
+                    msg.setText(f"You are running the latest version ({APP_VERSION}).")
+                    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                    msg.setStyleSheet("""
+                        QMessageBox {
+                            background-color: #1A1A1A;
+                            color: white;
+                        }
+                        QLabel {
+                            color: white;
+                        }
+                        QPushButton {
+                            background-color: #2A2A2A;
+                            color: white;
+                            border: 1px solid #444;
+                            border-radius: 4px;
+                            padding: 6px 12px;
+                        }
+                        QPushButton:hover {
+                            background-color: #3A3A3A;
+                        }
+                    """)
+                    msg.show()
+            except ImportError as e:
+                logger.error(f"Error importing updater module for results: {e}")
+                self.log_action(f"[!] Could not display update information: {str(e)}", adb=True)
+                # Still try to show the basic result
+                if is_available:
+                    self.log_action(f"[!] Update available: Version {latest_version} - Visit: {release_url}", adb=True)
         except Exception as e:
             logger.error(f"Error handling update result: {e}")
             self.log_action(f"[!] Update check result handling failed: {str(e)}", adb=True)
