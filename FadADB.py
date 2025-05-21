@@ -589,6 +589,7 @@ class FadADBGUI(QMainWindow):
         
         # Create tab widget
         self.tabs = QTabWidget()
+        self.tabs.setToolTip("Switch between managing devices, ADB tools, and app information")
         self.central_layout.addWidget(self.tabs)
 
         # Device Tab - Make scrollable
@@ -600,9 +601,16 @@ class FadADBGUI(QMainWindow):
         self.label = QLabel("Available Devices:")
         self.combo = QComboBox()
         self.combo.setPlaceholderText("Select a device from the list below...")
+        self.combo.setToolTip("📱 USB devices are automatically connected\n🔌 Wireless devices might need explicit connection")
+        
         self.refresh_button = QPushButton("Refresh Devices")
+        self.refresh_button.setToolTip("Scan for connected USB and wireless devices")
+        
         self.connect_button = QPushButton("Connect")
+        self.connect_button.setToolTip("Connect to the selected device (required for wireless devices)")
+        
         self.test_button = QPushButton("Test Device")
+        self.test_button.setToolTip("Test connection by retrieving device model information")
         
         # Manual add row
         manual_row = QHBoxLayout()
@@ -634,6 +642,7 @@ class FadADBGUI(QMainWindow):
         self.log.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         
         self.view_state_button = QPushButton("View Saved Wireless Devices")
+        self.view_state_button.setToolTip("Show the list of remembered wireless devices that will be auto-reconnected")
         self.view_state_button.clicked.connect(self.show_state_file)
 
         self.refresh_button.clicked.connect(self.load_devices)
@@ -662,6 +671,7 @@ class FadADBGUI(QMainWindow):
         self.adb_layout = QVBoxLayout(self.adb_tab_widget)
         
         self.toggle_server_button = QPushButton("Restart ADB Server")
+        self.toggle_server_button.setToolTip("Restart the ADB server and attempt to reconnect wireless devices")
         self.adb_log = QTextEdit()
         self.adb_log.setReadOnly(True)
         # Enhanced styling for the ADB log with better contrast
@@ -793,6 +803,7 @@ class FadADBGUI(QMainWindow):
         
         # Button for source code link
         source_code_btn = QPushButton("🔍 View Source Code on GitHub")
+        source_code_btn.setToolTip("Visit the project repository on GitHub")
         source_code_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2A2A2A;
@@ -810,6 +821,7 @@ class FadADBGUI(QMainWindow):
         
         # Button for checking updates
         check_updates_btn = QPushButton("🚀 Check for Updates")
+        check_updates_btn.setToolTip("Check if a newer version is available on GitHub")
         check_updates_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2A2A2A;
